@@ -1,0 +1,44 @@
+name: Release
+
+# A tag vYYYY.MM.DD[.N] publishes figpress-bokeh to PyPI (YYYY.MM.DD[.N]) with trusted publishing: no
+# token is stored. A version already on PyPI is skipped. Modelled on figpress-plotly's, without npm.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: The version matches the tag
+        run: python3 scripts/version.py check "$GITHUB_REF_NAME"
+      - run: uv run pytest -v
+      - run: node --test "tests/*.test.mjs"
+      - run: uv build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

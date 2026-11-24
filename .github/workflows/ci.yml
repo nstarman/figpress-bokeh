@@ -22,7 +22,20 @@ jobs:
       - name: Python tests (Chrome comes with the runner image)
         run: uv run pytest -v
       - name: Runtime tests
-        run: if ls tests/*.test.mjs >/dev/null 2>&1; then node --test "tests/*.test.mjs"; fi
+        run: node --test "tests/*.test.mjs"
+      - name: The examples, built and compared with their references (each under 30 s)
+        run: |
+          for name in bands grid; do
+            start=$SECONDS
+            uv run figpress-bokeh build examples/$name/figure.py:$name --out build/
+            echo "$name built in $((SECONDS - start)) s"; test $((SECONDS - start)) -lt 30
+            uv run figpress-bokeh compare build/$name.pdf examples/$name/reference.pdf --tol 1 --overlay build/$name-overlay.png
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: examples
+          path: build/
       - name: The Python package builds and imports
         run: |
           uv build
@@ -35,5 +48,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Playwright's Chromium
         run: uv run playwright install --with-deps chromium
-      - name: The web figure in a browser
+      - name: The web figures in a browser (hover, toggles, resize, theme, offline, overlay at three widths)
         run: uv run pytest -m smoke -v
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke
+          path: build/smoke/

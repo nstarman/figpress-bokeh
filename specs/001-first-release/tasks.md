@@ -165,8 +165,8 @@ resize keeps it; the single file works from disk with the network off
 
 **Independent test**: a tag that does not match the version fails before publishing
 
-- [ ] T042 [US6] `.github/workflows/release.yml`: on `vYYYY.MM.DD[.N]`, check the version against the tag, build, publish with trusted publishing from environment `pypi`; skip a version already on PyPI (modelled on figpress-plotly's, PyPI only)
-- [ ] T043 [US6] README.md (what it is, a figure, panels, the web figure, compare, limits, developing) and AGENTS.md layout and releasing sections, following figpress-plotly's
+- [X] T042 [US6] `.github/workflows/release.yml`: on `vYYYY.MM.DD[.N]`, check the version against the tag, build, publish with trusted publishing from environment `pypi`; skip a version already on PyPI (modelled on figpress-plotly's, PyPI only)
+- [X] T043 [US6] README.md (what it is, a figure, panels, the web figure, compare, limits, developing) and AGENTS.md layout and releasing sections, following figpress-plotly's
 - [ ] T044 [US6] Maintainer steps, not code: create the public GitHub repository `nstarman/figpress-bokeh`, register PyPI's pending trusted publisher, push the first tag
 - [ ] T045 [US6] After the first release: a pull request to figpress adding figpress-bokeh to `family.json` with `released: true`
 

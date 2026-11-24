@@ -22,3 +22,17 @@ tests/                      uv run --group dev pytest
 
 Checks: both examples' PDFs must pass `compare` against their `reference.pdf` within 1 pt
 (`tests/test_example.py`). Regenerate a reference only when the reference itself changes.
+
+## Releasing
+
+Versions are dates. A tag `vYYYY.MM.DD` (or `vYYYY.MM.DD.N`, N = 2, 3, … for another release the
+same day) publishes PyPI `YYYY.MM.DD[.N]`:
+
+```bash
+python scripts/version.py set v2026.12.01     # writes src/figpress_bokeh/__init__.py
+git commit -am "Release v2026.12.01" && git tag v2026.12.01 && git push --follow-tags
+```
+
+`release.yml` checks the version against the tag, runs the tests, builds, and publishes with
+trusted publishing from the `pypi` environment; a version already on PyPI is skipped. No token is
+stored. There is no npm package yet (constitution, Principle VI).
