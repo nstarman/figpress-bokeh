@@ -134,6 +134,16 @@ export async function mount(el, spec, { print = false } = {}) {
   const B = window.Bokeh;
   // BokehJS strokes every label after filling it; Chrome prints the stroke as a Type 3 font.
   B.require("core/util/svg").SVGRenderingContext2D.prototype.strokeText = function () {};
+  // Chromium on Linux rounds small text's glyph advances to whole pixels unless asked for geometric
+  // precision (a 5.5 pt bold label came out 2 pt short on CI); BokehJS never sets it on its canvases.
+  const fill = CanvasRenderingContext2D.prototype.fillText;
+  if (!fill.fbPrecise) {
+    CanvasRenderingContext2D.prototype.fillText = function (...args) {
+      if ("textRendering" in this) this.textRendering = "geometricPrecision";
+      return fill.apply(this, args);
+    };
+    CanvasRenderingContext2D.prototype.fillText.fbPrecise = true;
+  }
   await loadFonts(spec.fonts);
   const [W, H] = spec.page;
   const hidden = new Set();

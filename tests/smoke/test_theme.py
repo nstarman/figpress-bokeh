@@ -7,7 +7,9 @@ import pytest
 
 pytestmark = pytest.mark.smoke
 
-STATE = """() => { const v = [...Bokeh.index.roots].find(v => v.frame && v.model.renderers.length), p = v.model;
+STATE = """() => { const v = [...Bokeh.index.roots].find(v => v.frame && v.model.renderers.length);
+  if (!v) return {};  // between two drawings (a theme change redraws)
+  const p = v.model;
   const line = p.renderers.find(r => (r.glyph.tags || []).includes('fb:group:s2') && r.glyph.type === 'Line');
   return { ground: p.background_fill_color, axis: p.below[0].major_tick_line_color, outline: p.outline_line_color,
            line: line.glyph.line_color, body: getComputedStyle(document.body).backgroundColor,

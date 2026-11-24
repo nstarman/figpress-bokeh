@@ -75,7 +75,7 @@ PAGE = """<!doctype html>
 <meta name="figpress-bokeh-version" content="{version}">
 <link rel="icon" href="data:,">
 <title>{title}</title>
-<style>{style}html, body {{ margin: 0; background: #fff; color: #12161c; }} #figure {{ width: 100%; }}
+<style>{style}html, body {{ margin: 0; background: #fff; color: #12161c; text-rendering: geometricPrecision; }} #figure {{ width: 100%; }}
 html:has(#figure[data-theme="dark"]), html:has(#figure[data-theme="dark"]) body {{
   background: #0b0e14; color: #e5e9f0; color-scheme: dark;
 }}</style>
