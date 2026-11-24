@@ -33,8 +33,8 @@ Entities from [spec.md](spec.md); sizes are points unless stated.
   legend and other page text.
 - Validation: frames overlapping or leaving the page fail, naming the panels; shared axes with
   different author-set ranges fail.
-- State: frames are *computed* → *measured* in the print page → *corrected* once; still off by
-  > 0.1 pt fails, naming the panel and the offset.
+- Placement: each panel is its own root in one document; after layout the page moves it by its
+  frame's offset (from BokehJS), so the frame sits at its target. Tests check the result in print.
 
 ## Group
 

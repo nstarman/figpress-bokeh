@@ -32,8 +32,8 @@ pillow, numpy. Browser: BokehJS from the Python `bokeh` package.
 
 **Project Type**: library + CLI, browser runtime inside the Python package
 
-**Performance Goals**: each example builds both targets in < 30 s on CI, including the second print
-that corrects panel placement
+**Performance Goals**: each example builds both targets in < 30 s on CI (one Chrome print took
+15–25 s in the spike; see research R4)
 
 **Constraints**: no network at page runtime (Principle V); frames within 0.1 pt and fidelity within
 1 pt (SC-001, SC-002); no per-figure browser code (Principle IV); no Type 3 fonts in the PDF
@@ -47,7 +47,7 @@ that corrects panel placement
 | Principle | How this plan meets it |
 |---|---|
 | I. The paper is the reference | One decorated `build(target)` per figure; print and web are the same page drawn by BokehJS; a style is a Bokeh `Theme`, defaults only. |
-| II. Print fidelity in the paper's units | Sizes in points through `fb.pt` and `"Npt"` strings; panels measured and corrected to 0.1 pt; fonts embedded and checked (not Type 3); `fb.compare` per panel against matplotlib references in CI (R3, R4, R9). |
+| II. Print fidelity in the paper's units | Sizes in points through `fb.pt` and `fb.font` (8 px per pt); panels placed from BokehJS's frame boxes; fonts embedded and checked (not Type 3); `fb.compare` per panel against matplotlib references in CI (R3, R4, R9). |
 | III. The web adds, never changes | The runtime only scales, adds hover, group toggles and dark greys; the page it scales is the page that was printed. |
 | IV. One runtime, declared interactions | One `index.js`; groups are tags, hover tooltips are declared in Python; no `CustomJS` in figures (R6, R7). |
 | V. Pages that keep working | BokehJS, the runtime and the fonts are vendored at pinned versions; single self-contained file; CI checks no request leaves the page. |
@@ -80,8 +80,8 @@ src/figpress_bokeh/
 ├── legend.py          a matplotlib-style legend on the page layer, with group handles
 ├── figure.py          the decorator: page, style, build(target) → one Bokeh root
 ├── style.py           Style → Bokeh Theme
-├── page.py            the HTML page (fonts, BokehJS, the figure), used by print and web
-├── pdf.py             Chrome print, frame measurement and one correction, exact page (partly copied)
+├── page.py            the HTML page (fonts, BokehJS, one root per panel, placement), print and web
+├── pdf.py             Chrome print at 8 px per pt, placed on the exact page (partly copied)
 ├── web.py             page folder (index.html, figure.json, vendor/, fonts/) and single file
 ├── compare.py         per-panel text and frame offsets, overlay (copied, extended)
 ├── cli.py             figpress-bokeh build | compare
@@ -97,10 +97,9 @@ the two can be compared file by file when a shared package is considered.
 
 ## Phases
 
-0. **Spike follow-ups (R3, R4)**: in the repository's first test, settle the three spike findings
-   before building on them: the Type 3 glyphs in Chrome's PDF, the doubled rotated label, and the
-   measure-and-correct loop for frames. If Type 3 cannot be avoided, stop and decide with the
-   maintainer before Phase 1.
+0. **Spike follow-ups (R2–R4)**, done: Type 3 fonts and the doubled label came from BokehJS
+   stroking every label (turned off in the page); frames are placed by the page from BokehJS's
+   own frame boxes; figures are drawn at 8 px per pt and the PDF is scaled onto the exact page.
 1. **Print, one panel (US1)**: units, fonts, page, PDF, `tex` runs. Checked with the bands port.
 2. **Compare (US4)**: copied and extended per panel; lands with phase 1 so the port is measured.
 3. **Panels (US3)**: `panels()`, shared ranges, page layer, panel labels, figure legend, the grid

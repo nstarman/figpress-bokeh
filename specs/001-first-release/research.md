@@ -19,27 +19,37 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 
 ## R2. Units
 
-- **Decision**: `fb.pt(v)` converts points to Bokeh's screen units, which are CSS px (×4/3). Font
-  sizes are passed to Bokeh as `"8pt"` strings, which Bokeh accepts directly. `fb.dash(":", lw)`
-  gives matplotlib's dash patterns in px. Copied from figpress-plotly's `units.py`.
-- **Rationale**: Principle II; Bokeh and Plotly share the CSS px unit, so the code carries over.
+- **Decision**: figures are drawn at **K = 8 px per pt** (`fb.pt(v) = 8 v`), not at CSS's 4/3. Font
+  sizes are px strings (`fb.font(7)` → `"56px"`); `fb.dash(":", lw)` gives matplotlib's dash
+  patterns in the same units. The print step scales the page down by 1/(0.75 K) (R4); the web
+  runtime scales it to its column anyway (R7). Adapted from figpress-plotly's `units.py`.
+- **Rationale**: Bokeh's `frame_width` and `frame_height` are whole px. At 4/3 px per pt a frame
+  snaps to 0.75 pt steps (a 100 pt frame came out 99.75 pt); at 8 px per pt the step is 0.125 pt,
+  inside the 0.1 pt placement tolerance once frames are measured (R3).
+- **Alternatives**: CSS `transform: scale()` on the print page (Chrome clipped the content in
+  print); Chrome's DevTools `printToPDF` `scale` (works through Playwright, but a choreographer
+  connection hung in the spike and Playwright is too heavy as a runtime dependency).
 
 ## R3. Panels and exact placement
 
 - **Decision**: a figure's panels are placed by the package, not by Bokeh's layout engine. The
-  author gives each panel's frame (left, top, width, height in pt on the page) or a grid
-  (`fb.panels(grid=(rows, cols), frames=..., share_x=..., share_y=...)`). The package sets each
-  plot's `frame_width`/`frame_height` and its borders so its frame lands where it was given, puts
-  the panels in one Bokeh root (one document), then **measures** where BokehJS actually drew each
-  frame in the print page and corrects the borders once (a second print). The build fails if a
-  frame is still off by more than 0.1 pt, naming the panel. Shared axes are shared `Range1d`
-  objects; tick labels are hidden on inner panels unless asked.
+  author gives each panel's frame (left, top, width, height in pt on the page) or a grid. All
+  panels go in **one Bokeh document with one root per panel** (`bokeh.embed.util.
+  standalone_docs_json_and_render_items`), so ranges and data can be shared, and each root is
+  embedded in its own absolutely positioned element. Each plot gets `frame_width`/`frame_height`;
+  after BokehJS lays it out, the page reads the frame's box from the plot's view
+  (`Bokeh.index.roots[k].frame.bbox`) and moves the element so the frame sits at its target. This
+  happens in the page itself, for print and web alike, so no second print is needed. The build
+  reads back the measured frames and fails if one is off by more than 0.1 pt, naming the panel.
+  Shared axes are shared range objects; tick labels are hidden on inner panels unless asked.
 - **Spike**: (a) panels embedded as separate documents cannot share a range (Bokeh: "Models must be
   owned by only a single document"), so all panels must be one root. (b) In a `gridplot` with fixed
   `frame_width`, `frame_height` and `min_border_*`, frames landed several points from the computed
   positions (a 100 pt frame measured ≈ 97 pt between outline centres; the second panel's frame was
-  4 pt right of where the borders put it). Bokeh's layout is not exact by construction, so it must
-  be measured and corrected.
+  4 pt right of where the borders put it). The cause: `min_border_*` is a minimum, and Bokeh widens
+  a border to fit its tick and axis labels. (c) With one root per panel placed by the page, frames
+  landed within 0.05 pt of their targets (40.05, 139.95, 175.05, 274.95 pt against 40, 140, 175,
+  275).
 - **Rationale**: User Story 3 needs frames within 0.1 pt; computing alone does not achieve it, and
   measuring in the same Chrome that prints the PDF is the ground truth.
 - **Alternatives**: trusting `gridplot` (off by points, per the spike); separate absolutely placed
@@ -49,11 +59,21 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 ## R4. The PDF
 
 - **Decision**: there is no Kaleido step. The print page is the web page itself with
-  `output_backend="svg"`, the paper's fonts as `@font-face`, `@page { size: W pt H pt; margin: 0 }`,
+  `output_backend="svg"`, the paper's fonts as `@font-face`, `@page { size: 8W px 8H px; margin: 0 }`
   and BokehJS inlined; the page waits for the fonts before embedding the figure. Headless Chrome
-  prints it (`--print-to-pdf`, found through `choreographer`, as figpress-plotly finds it), and the
-  page box is then set to exactly W × H with pypdfium2 (copied from figpress-plotly's
-  `_exact_page`). The toolbar and logo are off on both targets.
+  prints it (`--print-to-pdf`, found through `choreographer`, as figpress-plotly finds it). pypdfium2
+  then places that page as a form XObject, scaled by 1/6 (that is, 1/(0.75 K)), on a new page of exactly W × H pt;
+  the fonts stay embedded. The toolbar and logo are off on both targets.
+- **Text outlines**: BokehJS draws every label twice, `fillText` then `strokeText`, even when the
+  text has no outline. Its SVG backend writes the second as a `<text fill="none" stroke=…>`, and
+  Chrome prints stroked text as a **Type 3** font. That was the spike's Type 3 font and its doubled
+  label. The page sets `SVGRenderingContext2D.prototype.strokeText` (from
+  `Bokeh.require("core/util/svg")`) to do nothing, and the build refuses a figure that sets
+  `text_outline_color`, since paper figures do not outline text. With that, the PDF has only
+  CID TrueType subsets and each label once.
+- **Speed**: Chrome took 15–25 s per print in the spike (BokehJS inlined, a 5 s virtual-time
+  budget). That threatens the 30 s per example goal; T047 measures it, and a page that signals when
+  it is drawn (so the budget can be short) is the first fix to try.
 - **Spike**: a one-page PDF of the page size (280.08 × 120 pt before the fix-up), text is real
   text, and the font is embedded as a subset. Two things to resolve in Phase 1: Chrome embedded
   some glyphs as **Type 3** fonts next to the CID TrueType subset, and the rotated axis label

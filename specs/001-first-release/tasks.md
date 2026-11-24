@@ -28,10 +28,10 @@ before US2 here because the web page draws whatever the print page draws, panels
 
 **Purpose**: the package skeleton
 
-- [ ] T001 Create `pyproject.toml` (hatchling; name `figpress-bokeh`; `requires-python = ">=3.12"`; dependencies bokeh 3.10.x, choreographer, fonttools, pypdfium2, pillow, numpy; dev group pytest, playwright, matplotlib; script `figpress-bokeh = "figpress_bokeh.cli:main"`; pytest marker `smoke`, `addopts = "-m 'not smoke'"`), modelled on `../figpress-plotly/pyproject.toml`
-- [ ] T002 Create `src/figpress_bokeh/__init__.py` with `__version__` and an empty public API, and `package.json` for `node --test` only (private, no npm publish)
-- [ ] T003 [P] Copy `scripts/version.py` from figpress-plotly and reduce it to the PyPI version (no npm); add `tests/test_package.py` (imports, version matches `scripts/version.py check`)
-- [ ] T004 [P] Create `.github/workflows/ci.yml` (uv; pytest; `node --test "tests/*.test.mjs"`; Playwright Chromium for `pytest -m smoke`), modelled on figpress-plotly's
+- [X] T001 Create `pyproject.toml` (hatchling; name `figpress-bokeh`; `requires-python = ">=3.12"`; dependencies bokeh 3.10.x, choreographer, fonttools, pypdfium2, pillow, numpy; dev group pytest, playwright, matplotlib; script `figpress-bokeh = "figpress_bokeh.cli:main"`; pytest marker `smoke`, `addopts = "-m 'not smoke'"`), modelled on `../figpress-plotly/pyproject.toml`
+- [X] T002 Create `src/figpress_bokeh/__init__.py` with `__version__` and an empty public API (no `package.json`: `node --test` runs `.mjs` files without one)
+- [X] T003 [P] Copy `scripts/version.py` from figpress-plotly and reduce it to the PyPI version (no npm); add `tests/test_package.py` (imports, version matches `scripts/version.py check`)
+- [X] T004 [P] Create `.github/workflows/ci.yml` (uv; pytest; `node --test "tests/*.test.mjs"`; Playwright Chromium for `pytest -m smoke`), modelled on figpress-plotly's
 
 ---
 
@@ -42,13 +42,13 @@ before US2 here because the web page draws whatever the print page draws, panels
 **Gate**: if T006 shows Chrome cannot print without Type 3 fonts, stop and decide with the
 maintainer before Phase 3.
 
-- [ ] T005 Write the spike as a test, `tests/test_spike.py`: one and two Bokeh panels (shared x range, one document) printed by headless Chrome from an HTML page with `output_backend="svg"`; assert one page, real text, embedded fonts
-- [ ] T006 Find why Chrome embeds some glyphs as Type 3 (rotated text, font format, `text-rendering`, SVG vs HTML text) and make `tests/test_spike.py` assert no Type 3 font; record the finding in `research.md` R4
-- [ ] T007 Find why the rotated axis label appears twice in the text layer and make `tests/test_spike.py` assert each label appears once; record it in `research.md` R4
-- [ ] T008 Prototype the measure-and-correct loop in `tests/test_spike.py`: read each frame's drawn box from BokehJS in the print page, adjust borders, print again; assert every frame within 0.1 pt; record the measurement method in `research.md` R3
-- [ ] T009 [P] Copy `units.py` (pt → px, dash patterns) to `src/figpress_bokeh/units.py`, with `tests/test_units.py`
-- [ ] T010 [P] Copy `fonts.py` (`Fonts`, `dejavu()`, advance widths, `@font-face` CSS) to `src/figpress_bokeh/fonts.py`, with `tests/test_fonts.py`; a missing file fails, naming it
-- [ ] T011 Write `src/figpress_bokeh/page.py`: the HTML page shared by print and web (fonts as `@font-face`, BokehJS from the installed `bokeh` inlined or as a vendor file, wait for fonts, `embed_item` of one root), with `tests/test_page.py`
+- [X] T005 Write the spike as a test, `tests/test_print.py` (named for what it checks): one and two Bokeh panels (shared x range, one document) printed by headless Chrome from an HTML page with `output_backend="svg"`; assert one page, real text, embedded fonts
+- [X] T006 Find why Chrome embeds some glyphs as Type 3 (rotated text, font format, `text-rendering`, SVG vs HTML text) and make `tests/test_print.py` assert no Type 3 font; record the finding in `research.md` R4
+- [X] T007 Find why the rotated axis label appears twice in the text layer and make `tests/test_print.py` assert each label appears once; record it in `research.md` R4
+- [X] T008 Place frames in the page itself: one root per panel, each moved after layout by its frame's offset from BokehJS (no second print); `tests/test_print.py` checks the outlines; recorded in `research.md` R3
+- [X] T009 [P] Copy `units.py` (pt → px, dash patterns) to `src/figpress_bokeh/units.py`, with `tests/test_units.py`
+- [X] T010 [P] Copy `fonts.py` (`Fonts`, `dejavu()`, advance widths, `@font-face` CSS) to `src/figpress_bokeh/fonts.py`, with `tests/test_fonts.py`; a missing file fails, naming it
+- [X] T011 Write `src/figpress_bokeh/page.py`: the HTML page shared by print and web (fonts as `@font-face`, BokehJS from the installed `bokeh` inlined or as a vendor file, wait for fonts, `embed_item` of one root), with `tests/test_page.py`
 
 **Checkpoint**: print route proven; units, fonts and the page exist
 
@@ -111,7 +111,7 @@ position and matches its matplotlib reference within 1 pt (SC-002)
 ### Implementation for US3
 
 - [ ] T026 [US3] `src/figpress_bokeh/panels.py`: `panels(plots, frames=None, margins=None, gaps=None, share_x=None, share_y=None, labels=None)`; frames and a grid both fails; one Bokeh root holding the panels and the page layer (a plot covering the page, no axes, in page points)
-- [ ] T027 [US3] `src/figpress_bokeh/pdf.py`: measure each frame in the print page (T008's method), correct borders once, print again; fail beyond 0.1 pt
+- [ ] T027 [US3] Extend `tests/test_print.py`'s placement check to the grid example (placement itself is in `page.py` since T008)
 - [ ] T028 [US3] Panel labels on the page layer in `src/figpress_bokeh/panels.py`, set by `text.py` runs, at the same position relative to each frame
 - [ ] T029 [US3] `src/figpress_bokeh/legend.py`: `legend(target, entries, at, size, loc="upper left", ...)` and `Entry(group, label, line=None, band=None, edge=None, marker=None)`, laid out as matplotlib's legend (copy the layout rules from figpress-plotly's `legend.py`) on the page layer; an unknown group fails; with `tests/test_legend.py`
 - [ ] T030 [US3] `examples/grid/reference.py` (matplotlib, 2 × 2, shared x per column and y per row, one figure legend, labels (a)–(d), DejaVu fonts) → commit `examples/grid/reference.pdf`
