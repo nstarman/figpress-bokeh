@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from bokeh.models import Arrow, FixedTicker, LogAxis, NormalHead, Range1d, Span
+from bokeh.models import Arrow, FixedTicker, HoverTool, LogAxis, NormalHead, Range1d, Span
 from bokeh.plotting import figure
 
 import figpress_bokeh as fb
@@ -78,7 +78,9 @@ def bands(target):
                    tags=[f"fb:group:s{z}"])
 
         def line(c=c, alpha=alpha, mid=mid, z=z):
-            p.line(P, mid, line_color=c, line_alpha=alpha, line_width=fb.pt(1.6), tags=[f"fb:group:s{z}"])
+            r = p.line(P, mid, line_color=c, line_alpha=alpha, line_width=fb.pt(1.6), tags=[f"fb:group:s{z}"])
+            p.add_tools(HoverTool(renderers=[r], tooltips=[("", f"{z}σ"), ("p_A", "@x{0.00%}"), ("N", "@y{0,0}")],
+                                  line_policy="nearest"))
 
         layers += [(max(SIGMAS) - z, 2 * n, band), (2, 2 * n + 1, line)]
     for _, _, draw in sorted(layers, key=lambda t: t[:2]):

@@ -133,16 +133,16 @@ resize keeps it; the single file works from disk with the network off
 
 ### Tests for US2
 
-- [ ] T033 [P] [US2] `tests/runtime.test.mjs`: the runtime's pure functions (scale factor and clamping to ½×–3×, group state, which renderers a group holds)
-- [ ] T034 [P] [US2] `tests/smoke/test_browser.py` and `tests/smoke/conftest.py` (Playwright): hover values, legend toggles across panels (figure legend and Bokeh's own `click_policy="hide"` legend), resize keeps toggles, no request to another host, the single file from disk
-- [ ] T035 [P] [US2] `tests/smoke/test_overlay.py`: each example's page against its PDF at ½×, 1× and 2× (SC-003), copied from figpress-plotly's overlay test
+- [X] T033 [P] [US2] `tests/runtime.test.mjs`: the runtime's pure functions (scale factor and clamping to ½×–3×, group state, which renderers a group holds)
+- [X] T034 [P] [US2] `tests/smoke/test_browser.py` and `tests/smoke/conftest.py` (Playwright): hover values, legend toggles across panels (figure legend and Bokeh's own `click_policy="hide"` legend), resize keeps toggles, no request to another host, the single file from disk
+- [X] T035 [P] [US2] `tests/smoke/test_overlay.py`: each example's page against its PDF at ½×, 1× and 2× (SC-003), copied from figpress-plotly's overlay test
 
 ### Implementation for US2
 
-- [ ] T036 [US2] `src/figpress_bokeh/web.py`: page folder (`index.html`, `figure.json` as in `contracts/web-page.md`, `fonts/`, `vendor/bokeh-<version>.min.js`, `vendor/figpress-bokeh-<version>/index.js`) and the single file with everything inlined; `output_backend` canvas for the web
-- [ ] T037 [US2] `src/figpress_bokeh/js/index.js`: `mount(element, spec)`: load fonts, embed, scale (try CSS `zoom` first; fall back to rescaling pixel properties if T034 or T035 fail under `zoom`; record which in `research.md` R7), keep hidden groups across redraws
-- [ ] T038 [US2] Group toggles in `src/figpress_bokeh/js/index.js`: clicks on figure-legend entries and on Bokeh legend items hide every renderer tagged with that group in every panel; `mount` returns `{setTheme, hidden}`
-- [ ] T039 [US2] Hover in `src/figpress_bokeh/figure.py`: tooltips declared in Python survive the hidden toolbar on the web; none in print
+- [X] T036 [US2] `src/figpress_bokeh/web.py`: page folder (`index.html`, `figure.json` as in `contracts/web-page.md`, `fonts/`, `vendor/bokeh-<version>.min.js`, `vendor/figpress-bokeh-<version>/index.js`) and the single file with everything inlined; `output_backend` canvas for the web
+- [X] T037 [US2] `src/figpress_bokeh/js/index.js`: `mount(element, spec)`: load fonts, embed, scale by rescaling the document's pixel lengths and redrawing on resize (CSS `zoom` and transforms both broke Bokeh; `research.md` R7), keep hidden groups across redraws
+- [X] T038 [US2] Group toggles in `src/figpress_bokeh/js/index.js`: clicks on figure-legend entries and on Bokeh legend items hide every renderer tagged with that group in every panel; `mount` returns `{setTheme, hidden}`
+- [X] T039 [US2] Hover in `src/figpress_bokeh/figure.py`: tooltips declared in Python survive the hidden toolbar on the web; none in print
 
 **Checkpoint**: both examples work on the web, matching their PDFs
 

@@ -11,9 +11,8 @@ import pypdfium2 as pdfium
 import pytest
 from bokeh.plotting import figure
 
+import figpress_bokeh as fb
 from figpress_bokeh.fonts import FAMILY, dejavu
-from figpress_bokeh.page import html
-from figpress_bokeh.pdf import print_page
 from figpress_bokeh.units import font, pt
 
 PAGE = (300, 120)
@@ -21,8 +20,7 @@ FRAMES = [(40, 10, 100, 80), (175, 10, 100, 80)]
 
 
 def panel(x_range=None):
-    p = figure(frame_width=round(pt(100)), frame_height=round(pt(80)), toolbar_location=None, min_border=0,
-               **({"x_range": x_range} if x_range else {}))
+    p = figure(**({"x_range": x_range} if x_range else {}))
     p.line([0, 1, 2], [0, 1, 0], line_width=pt(1))
     p.outline_line_color, p.outline_line_width, p.grid.visible = "black", pt(1), False
     p.yaxis.axis_label = "v (km/s)"
@@ -32,12 +30,15 @@ def panel(x_range=None):
     return p
 
 
+@fb.figure(page=PAGE, frame=(0, 0, *PAGE), fonts=dejavu())
+def two(target):
+    a = panel()
+    return fb.panels([a, panel(a.x_range)], FRAMES)
+
+
 @pytest.fixture(scope="module")
 def pdf(tmp_path_factory) -> Path:
-    a = panel()
-    b = panel(a.x_range)
-    out = tmp_path_factory.mktemp("print") / "two.pdf"
-    return print_page(html([a, b], FRAMES, PAGE, dejavu()), out, PAGE)
+    return two.write_pdf(tmp_path_factory.mktemp("print") / "two.pdf")
 
 
 def fonts(path: Path) -> set[bytes]:

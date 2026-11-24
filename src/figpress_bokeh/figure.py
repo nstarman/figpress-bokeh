@@ -11,9 +11,10 @@ from pathlib import Path
 
 from bokeh.core.validation import silence
 from bokeh.core.validation.warnings import MISSING_RENDERERS
-from bokeh.models import LogScale, Plot, Range1d
+from bokeh.models import InlineStyleSheet, LogScale, Plot, Range1d
 
 from .fonts import Fonts
+from . import units
 from .units import pt
 
 TARGETS = ("pdf", "web")
@@ -27,7 +28,10 @@ def page_layer(page: tuple[float, float]) -> Plot:
     w, h = page
     p = Plot(x_range=Range1d(0, w), y_range=Range1d(h, 0), frame_width=round(pt(w)), frame_height=round(pt(h)),
              min_border=0, toolbar_location=None, outline_line_color=None, background_fill_alpha=0,
-             border_fill_alpha=0, name="fb-page-layer")
+             border_fill_alpha=0, name="fb-page-layer",
+             # It covers the panels: the mouse must reach them through it (legend clicks are hit-tested
+             # by the runtime). Bokeh's own styles turn pointer events back on inside its shadow root.
+             stylesheets=[InlineStyleSheet(css=":host, :host * { pointer-events: none !important; }")])
     p.toolbar.logo = None
     return p
 
@@ -44,6 +48,7 @@ class Context:
     panels: list[tuple[Plot, tuple[float, float, float, float]]] = field(default_factory=list)
     outer: dict = field(default_factory=dict)  # id(plot) -> whether its x and y tick labels are drawn
     extents: dict = field(default_factory=dict)  # (id(plot), axis) -> how far its tick labels reach (pt)
+    entries: dict = field(default_factory=dict)  # legend group -> its entry's box (l, t, r, b) on the page (pt)
 
     def frame_of(self, plot: Plot) -> tuple[float, float, float, float]:
         for p, f in self.panels:
@@ -88,6 +93,10 @@ class Built:
     page: tuple[float, float]
     fonts: Fonts
     theme: object
+    k: float  # px per pt it was drawn at
+    target: str
+    name: str
+    entries: dict  # legend group -> its entry's box on the page (pt), for the web's toggles
 
 
 class Figure:
@@ -116,6 +125,7 @@ class Figure:
     def build(self, target: str = "pdf") -> Built:
         if target not in TARGETS:
             raise ValueError(f"target must be one of {TARGETS}, not {target!r}")
+        k_token = units._k.set(units.PER_TARGET[target])
         ctx = Context(target, self.page, self.fonts, page_layer(self.page), self.frame)
         token = _current.set(ctx)
         try:
@@ -126,18 +136,25 @@ class Figure:
                 raise TypeError(f"{self.name}() must return a Bokeh plot or fb.panels(...), not {type(out).__name__}")
         finally:
             _current.reset(token)
+            units._k.reset(k_token)
         plots = [p for p, _ in ctx.panels] + [ctx.layer]
         frames = [f for _, f in ctx.panels] + [(0.0, 0.0, *self.page)]
         for p in plots:
             _no_text_outlines(p)
-        return Built(plots, frames, self.page, self.fonts, self.style.theme if self.style else None)
+        return Built(plots, frames, self.page, self.fonts, self.style.theme if self.style else None,
+                     units.PER_TARGET[target], target, self.name, dict(ctx.entries))
 
     def write_pdf(self, path) -> Path:
         from .page import html
         from .pdf import print_page
 
         b = self.build("pdf")
-        return print_page(html(b.plots, b.frames, b.page, b.fonts, title=self.name, theme=b.theme), Path(path), b.page)
+        return print_page(html(b), Path(path), b.page)
+
+    def write_web(self, out, single_file=None) -> Path:
+        from .web import write_web
+
+        return write_web(self.build("web"), Path(out), single_file)
 
     def __call__(self, target: str = "pdf") -> Built:
         return self.build(target)

@@ -6,13 +6,15 @@ panel's frame sits exactly where the figure puts it (research R3).
 """
 
 import json
+from html import escape as html_escape
+from pathlib import Path
 
 from bokeh.embed.util import OutputDocumentFor, standalone_docs_json_and_render_items
 from bokeh.models import Plot
 from bokeh.resources import Resources
 
-from .fonts import FAMILY, Fonts
-from .units import K
+from . import __version__
+from .fonts import Fonts, b64
 
 
 def bokehjs() -> str:
@@ -35,46 +37,55 @@ def document(plots: list[Plot], theme=None) -> tuple[dict, list[dict]]:
     return docs, out
 
 
-# Runs in the page: no text outlines (BokehJS strokes every label, which Chrome prints as Type 3
-# fonts), the fonts before anything is measured, then the figure, then each panel moved so its
-# frame lands on its target. `window.fbDrawn` is set once the figure is drawn.
-SCRIPT = """
-Bokeh.require("core/util/svg").SVGRenderingContext2D.prototype.strokeText = function () {};
-(async () => {
-  const F = %(figure)s;
-  await Promise.all(F.families.map(f => document.fonts.load(`16px ${f}`)));
-  await Bokeh.embed.embed_items(F.docs, F.items);
-  const views = [...Bokeh.index.roots];
-  const placed = [];
-  F.frames.forEach(([l, t], k) => {
-    const v = views.find(v => v.model.id === F.ids[k]);
-    const b = v.frame.bbox, el = document.getElementById(`fb-panel-${k}`);
-    el.style.left = `${l - b.left}px`;
-    el.style.top = `${t - b.top}px`;
-    placed.push([l, t, b.width, b.height]);
-  });
-  window.fbPlaced = placed;
-  window.fbDrawn = true;
-})();
+RUNTIME = Path(__file__).parent / "js" / "index.js"
+
+
+def spec(built, fonts: dict[str, str]) -> dict:
+    """What the runtime draws (figure.json): the document, its panels' roots and frames (drawing px),
+    the page (pt), px per pt, the fonts' URLs by family, and the legend entries' boxes (pt)."""
+    for p in built.plots:
+        p.output_backend = "svg" if built.target == "pdf" else "canvas"
+    docs, items = document(built.plots, built.theme)
+    k = built.k
+    return {"version": __version__, "name": built.name, "page": list(built.page), "k": k, "docs": docs,
+            "items": items, "ids": [p.id for p in built.plots], "frames": [[l * k, t * k] for l, t, _, _ in built.frames],
+            "fonts": fonts, "legend": {g: list(b) for g, b in built.entries.items()}}
+
+
+def inline_fonts(fonts: Fonts) -> dict[str, str]:
+    return {fam: f"data:font/ttf;base64,{b64(path)}" for fam, path in fonts.files().items()}
+
+
+def standalone(built, title: str | None = None, print_: bool = False) -> str:
+    """The figure as one self-contained HTML page: BokehJS, the runtime, the figure and its fonts."""
+    s = json.dumps(spec(built, inline_fonts(built.fonts))).replace("</", "<\\/")
+    w, h = (v * built.k for v in built.page)
+    size = f"@page{{size:{w:g}px {h:g}px;margin:0}}" if print_ else ""
+    boot = (f'<script type="module">\n{RUNTIME.read_text(encoding="utf-8")}\n'
+            f'window.fbFigure = await mount(document.getElementById("figure"), {s}, {{print: {str(print_).lower()}}});\n'
+            "</script>")
+    return PAGE.format(title=html_escape(title or built.name), version=__version__, style=size, bokeh=bokehjs(), boot=boot)
+
+
+PAGE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="figpress-bokeh-version" content="{version}">
+<link rel="icon" href="data:,">
+<title>{title}</title>
+<style>{style}html, body {{ margin: 0; background: #fff; }} #figure {{ width: 100%; }}</style>
+{bokeh}
+</head>
+<body>
+<div id="figure"></div>
+{boot}
+</body>
+</html>
 """
 
 
-def html(plots: list[Plot], frames: list[tuple[float, float, float, float]], page: tuple[float, float],
-         fonts: Fonts, title: str = "figure", backend: str = "svg", theme=None) -> str:
-    """The page for `plots`, each with its frame (left, top, width, height in pt) on a page of
-    `page` (pt). `backend` is Bokeh's output backend: "svg" for print, "canvas" for the web."""
-    if len(plots) != len(frames):
-        raise ValueError(f"{len(plots)} panels but {len(frames)} frames")
-    for p in plots:
-        p.output_backend = backend
-    docs, items = document(plots, theme)
-    w, h = (v * K for v in page)
-    figure = {"docs": docs, "items": items, "ids": [p.id for p in plots], "families": list(FAMILY.values()),
-              "frames": [[l * K, t * K] for l, t, _, _ in frames]}
-    panels = "".join(f'<div class="fb-panel" id="fb-panel-{k}"></div>' for k in range(len(plots)))
-    script = SCRIPT % {"figure": json.dumps(figure).replace("</", "<\\/")}
-    return (f"<!doctype html><html lang=en><head><meta charset=utf-8><title>{title}</title><style>"
-            f"@page{{size:{w:g}px {h:g}px;margin:0}}html,body{{margin:0;background:#fff}}{fonts.css()}"
-            f".fb-page{{position:relative;width:{w:g}px;height:{h:g}px;overflow:hidden}}"
-            f".fb-panel{{position:absolute;left:0;top:0}}</style>{bokehjs()}</head><body>"
-            f'<div class="fb-page">{panels}</div><script>{script}</script></body></html>')
+def html(built) -> str:
+    """The print page of a figure built for "pdf"."""
+    return standalone(built, print_=True)

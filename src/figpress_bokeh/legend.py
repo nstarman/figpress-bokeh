@@ -52,7 +52,8 @@ def legend(entries, at, size, *, title=None, ncol=1, handlelength=2.0, handlehei
     `ax.legend(..., loc="upper left", bbox_to_anchor=at, borderaxespad=0)` with the same parameters
     (in units of `size`, matplotlib's names and defaults). Entries fill the columns top to bottom.
     Returns the box (left, top, right, bottom) in pt."""
-    layer = context().layer
+    ctx = context()
+    layer = ctx.layer
     fs = size
     columns = [list(c) for c in np.array_split(np.array(entries, dtype=object), ncol) if len(c)]
     item_w = [[(handlelength + handletextpad) * fs + width(e.label, fs) for e in col] for col in columns]
@@ -99,5 +100,6 @@ def legend(entries, at, size, *, title=None, ncol=1, handlelength=2.0, handlehei
                                             line_dash=to_dash(style["dash"], style["width"]) if style.get("dash") else []),
                                     name=tag)
             text(e.label, x1 + handletextpad * fs, base, fs, color=color, name=tag)
+            ctx.entries[e.group] = (x0, base - fs, x1 + handletextpad * fs + width(e.label, fs), base + 0.3 * fs)
         cx += cw + columnspacing * fs
     return left, top, right, bottom

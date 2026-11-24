@@ -43,7 +43,7 @@ def main(argv=None) -> int:
             fig = load(args.figure)
             if args.target in ("pdf", "both"):
                 print(fig.write_pdf(args.out / f"{fig.name}.pdf"))
-            if args.target in ("web", "both") and hasattr(fig, "write_web"):  # the web figure comes with US2
+            if args.target in ("web", "both"):
                 print(fig.write_web(args.out / fig.name, single_file=args.out / f"{fig.name}.html"))
             return 0
         result = compare(args.new, args.reference, tol=args.tol, overlay=args.overlay)

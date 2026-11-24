@@ -123,17 +123,29 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 
 ## R7. The web runtime
 
-- **Decision**: one ES module, `js/index.js`, shipped in the Python package. It loads the fonts,
-  embeds the figure (`Bokeh.embed.embed_item` on a `json_item`), scales it to its container between
-  ½× and 3× the print width, keeps the reader's state (hidden groups) across redraws, wires group
-  toggles, and maps greys for dark mode. Scaling: first try CSS `zoom` on the page container (one
-  line, and Bokeh redraws at the new resolution); if hover positions or the overlay test fail under
-  `zoom`, rescale the pixel-valued model properties instead, as figpress-plotly does. BokehJS is
-  the build shipped in the Python `bokeh` package used to build the figure, so the model JSON and
-  the renderer always match.
-- **Rationale**: Principles IV and V.
+- **Decision**: one ES module, `js/index.js`, shipped in the Python package and used by both the
+  print page and the web page (Principle IV). `mount(element, spec, {print})` loads the fonts,
+  embeds the figure (one document, one root per panel), places each panel by its frame and, on the
+  web, wires groups and scales the page. Web figures are drawn at 4 px per pt.
+- **Scaling**: the runtime multiplies every screen length in the document's JSON (frame sizes,
+  borders, line widths and dashes, font sizes, tick lengths, standoffs, offsets, marker and head
+  sizes; whole px where BokehJS requires it) by the scale that fits the column, between ½× and 3×
+  the print width, embeds that, and redraws when the column's width changes by more than 1 %.
+  Hidden groups are re-applied after a redraw. Bokeh then draws at its true size: canvases are
+  sharp and hover lands where the mouse is.
+- **Why not CSS**: Bokeh sizes its canvases from `getBoundingClientRect()`, which includes CSS
+  `zoom` and `transform`, so with either it drew only part of each canvas (seen at 700 px, where
+  the page is drawn 979 px wide). figpress-plotly found the same with Plotly.
+- **The page layer** carries a stylesheet turning pointer events off inside its shadow root (Bokeh's
+  own styles turn them back on), so the mouse reaches the panels; legend clicks are hit-tested by
+  the runtime from the entries' boxes, which Python records.
+- **Groups**: renderers whose own tags or whose glyph's tags hold `fb:group:<name>`
+  (`p.line(..., tags=[...])` tags the glyph). Bokeh's own `click_policy="hide"` legend hides one
+  renderer; the runtime makes the rest of its group follow.
+- **Baseline on the web**: the canvas has the same baseline offset as the SVG output, so the
+  correction in `text()` serves both targets; both examples overlay their PDFs at ½×, 1× and 2×.
 - **Alternatives**: `bokeh.embed.file_html` (no fonts, scaling or state; CDN unless told
-  otherwise).
+  otherwise); `sizing_mode="scale_width"` (scales the canvas, not fonts or line widths).
 
 ## R8. Dark mode
 

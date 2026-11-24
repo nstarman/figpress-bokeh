@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Only for `node --test`: the runtime is an ES module shipped inside the Python package."
+}
