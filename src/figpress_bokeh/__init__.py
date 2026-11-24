@@ -5,15 +5,17 @@ publishes and a matching interactive web figure. Follow it at
 https://github.com/nstarman/figpress-bokeh and the figpress family at https://nstarkman.space/figpress/.
 """
 
+from .axes import axis_label, ticklabels
 from .compare import compare
 from .figure import Figure, context, figure
 from .fonts import Fonts, dejavu
 from .style import Style
 from .legend import Entry, legend
+from .panels import Panels, panels
 from .text import tex, text, width
 from .units import dash, font, pt
 
-__all__ = ("Entry", "Figure", "Fonts", "Style", "__version__", "compare", "context", "dash", "dejavu", "figure", "font", "legend", "pt", "tex",
-           "text", "width")
+__all__ = ("Entry", "Figure", "Fonts", "Panels", "Style", "__version__", "axis_label", "compare", "context", "dash",
+           "dejavu", "figure", "font", "legend", "panels", "pt", "tex", "text", "ticklabels", "width")
 
 __version__ = "2026.11.24"

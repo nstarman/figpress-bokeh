@@ -42,6 +42,8 @@ class Context:
     layer: Plot
     frame: tuple[float, float, float, float]  # a single-panel figure's frame
     panels: list[tuple[Plot, tuple[float, float, float, float]]] = field(default_factory=list)
+    outer: dict = field(default_factory=dict)  # id(plot) -> whether its x and y tick labels are drawn
+    extents: dict = field(default_factory=dict)  # (id(plot), axis) -> how far its tick labels reach (pt)
 
     def frame_of(self, plot: Plot) -> tuple[float, float, float, float]:
         for p, f in self.panels:
@@ -120,8 +122,8 @@ class Figure:
             out = self.fn(target)
             if isinstance(out, Plot):
                 ctx.frame_of(out)
-            elif not ctx.panels:
-                raise TypeError(f"{self.name}() must return a Bokeh plot, not {type(out).__name__}")
+            elif type(out).__name__ != "Panels" or not ctx.panels:
+                raise TypeError(f"{self.name}() must return a Bokeh plot or fb.panels(...), not {type(out).__name__}")
         finally:
             _current.reset(token)
         plots = [p for p, _ in ctx.panels] + [ctx.layer]

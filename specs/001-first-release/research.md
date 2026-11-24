@@ -74,7 +74,9 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 - **Speed**: Chrome took 13–25 s per print, even for a trivial page: with the default profile it
   crashed on exit and recorded a crash dump, and a fresh profile costs ~15 s to create. Chrome now
   runs with first-run, sync, extension and update checks off and a persistent profile in
-  figpress-bokeh's cache folder; a print takes ~2 s. Prints take turns on a file lock, since one
+  figpress-bokeh's cache folder; a print then took ~2 s at first, but 5–20 s later, erratically, as
+  desktop Chrome installed default web apps and did OS integration in the background. Puppeteer's
+  flag set did not settle it. Next to try (T047): Chrome for Testing, or one browser kept open. Prints take turns on a file lock, since one
   profile cannot serve two Chromes and a showyourwork build runs figure scripts in parallel.
 - **Spike**: a one-page PDF of the page size (280.08 × 120 pt before the fix-up), text is real
   text, and the font is embedded as a subset. Two things to resolve in Phase 1: Chrome embedded

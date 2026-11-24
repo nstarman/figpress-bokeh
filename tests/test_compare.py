@@ -48,3 +48,24 @@ def test_the_frame_moves(tmp_path):
 def test_page_sizes_must_agree(tmp_path):
     with pytest.raises(ValueError, match="page sizes differ"):
         compare(page(tmp_path / "a.pdf"), page(tmp_path / "b.pdf", size=(3, 2.5)))
+
+
+def two_panels(path, shift=0.0):
+    fig = plt.figure(figsize=(4, 2))
+    fig.add_axes((0.1, 0.2, 0.35, 0.7))
+    fig.add_axes((0.55 + shift / 288, 0.2, 0.35, 0.7))
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
+def test_each_panels_frame_is_measured(tmp_path):
+    a, b = two_panels(tmp_path / "a.pdf"), two_panels(tmp_path / "b.pdf", shift=1.5)  # the right panel 1.5 pt right
+    bad = {e.name: e.dx for e in compare(b, a).elements if not e.ok and e.kind == "frame"}
+    assert set(bad) == {"x3", "x4"} and bad["x3"] == pytest.approx(1.5, abs=0.15)
+    assert len([e for e in compare(a, a).elements if e.kind == "frame"]) == 6  # 4 vertical lines, 2 horizontal
+
+
+def test_panel_counts_must_agree(tmp_path):
+    with pytest.raises(ValueError, match="panel counts differ"):
+        compare(two_panels(tmp_path / "a.pdf"), page(tmp_path / "b.pdf", size=(4, 2)))

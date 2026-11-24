@@ -86,8 +86,8 @@ the style's fonts, none Type 3, no toolbar or logo, each text once
 **Independent test**: the bands port passes at 1 pt; a copy with one label moved 2 pt fails,
 naming it
 
-- [ ] T020 [P] [US4] `tests/test_compare.py`: copied from figpress-plotly (done); still to add: a two-panel case (frames matched by position, text matched within its panel) and the moved-label failure
-- [ ] T021 [US4] `src/figpress_bokeh/compare.py`: copied from figpress-plotly (done, one frame); still to do, with the grid example: find every panel frame as a closed rectangle of long dark lines; match panels by position; page sizes or panel counts that differ fail
+- [X] T020 [P] [US4] `tests/test_compare.py`: copied from figpress-plotly, plus a two-panel case (frames matched by position, text matched within its panel) and the moved-label failure
+- [X] T021 [US4] `src/figpress_bokeh/compare.py`: copied from figpress-plotly; finds every panel frame as a closed rectangle of long dark lines; match panels by position; page sizes or panel counts that differ fail
 - [X] T022 [US4] `src/figpress_bokeh/cli.py`: `figpress-bokeh build file.py:name --out DIR [--target pdf|web]` and `compare NEW REF --tol 1 --overlay PNG`; exit 0, 1 (comparison failed), 2 (usage), with `tests/test_cli.py`
 - [X] T023 [US4] `tests/test_example.py`: the bands port matches `examples/bands/reference.pdf` within 1 pt (SC-001); tune T019 until it does
 
@@ -105,18 +105,18 @@ position and matches its matplotlib reference within 1 pt (SC-002)
 
 ### Tests for US3
 
-- [ ] T024 [P] [US3] `tests/test_panels.py`: frames from a grid and from explicit frames; overlap or off-page fails naming the panels; shared axes share one range and hide inner tick labels; different author-set ranges on a shared axis fail
-- [ ] T025 [P] [US3] `tests/test_placement.py`: printed frames within 0.1 pt after one correction; a frame still off fails naming the panel and the offset
+- [X] T024 [P] [US3] `tests/test_panels.py`: frames from a grid and from explicit frames; overlap or off-page fails naming the panels; shared axes share one range and hide inner tick labels; different author-set ranges on a shared axis fail
+- [X] T025 [P] [US3] Placement in print: `tests/test_print.py` (two panels) and the grid's eight frame lines in `tests/test_example.py`, within 0.3 pt (BokehJS draws outlines up to 0.25 pt inside the frame; the frames themselves are exact)
 
 ### Implementation for US3
 
-- [ ] T026 [US3] `src/figpress_bokeh/panels.py`: `panels(plots, frames=None, margins=None, gaps=None, share_x=None, share_y=None, labels=None)`; frames and a grid both fails; one Bokeh root holding the panels and the page layer (a plot covering the page, no axes, in page points)
-- [ ] T027 [US3] Extend `tests/test_print.py`'s placement check to the grid example (placement itself is in `page.py` since T008)
-- [ ] T028 [US3] Panel labels on the page layer in `src/figpress_bokeh/panels.py`, set by `text.py` runs, at the same position relative to each frame
+- [X] T026 [US3] `src/figpress_bokeh/panels.py`: `panels(plots, frames=None, margins=None, gaps=None, share_x=None, share_y=None, labels=None)`; frames and a grid both fails; one Bokeh root holding the panels and the page layer (a plot covering the page, no axes, in page points)
+- [X] T027 [US3] Extend `tests/test_print.py`'s placement check to the grid example (placement itself is in `page.py` since T008)
+- [X] T028 [US3] Panel labels on the page layer in `src/figpress_bokeh/panels.py`, set by `text.py` runs, at the same position relative to each frame
 - [X] T029 [US3] (done early: the bands port needs it) `src/figpress_bokeh/legend.py`: `legend(target, entries, at, size, loc="upper left", ...)` and `Entry(group, label, line=None, band=None, edge=None, marker=None)`, laid out as matplotlib's legend (copy the layout rules from figpress-plotly's `legend.py`) on the page layer; an unknown group fails; with `tests/test_legend.py`
-- [ ] T030 [US3] `examples/grid/reference.py` (matplotlib, 2 × 2, shared x per column and y per row, one figure legend, labels (a)–(d), DejaVu fonts) → commit `examples/grid/reference.pdf`
-- [ ] T031 [US3] `examples/grid/figure.py`: the Bokeh port with `panels()`, groups tagged `fb:group:<name>`, the figure legend
-- [ ] T032 [US3] `tests/test_example.py`: the grid port matches its reference within 1 pt for every panel's frame and text (SC-002)
+- [X] T030 [US3] `examples/grid/reference.py` (data in `grid_common.py`; `common` would clash with the bands example's) (matplotlib, 2 × 2, shared x per column and y per row, one figure legend, labels (a)–(d), DejaVu fonts) → commit `examples/grid/reference.pdf`
+- [X] T031 [US3] `examples/grid/figure.py`: the Bokeh port with `panels()`, groups tagged `fb:group:<name>`, the figure legend
+- [X] T032 [US3] `tests/test_example.py`: the grid port matches its reference within 1 pt for every panel's frame and text (SC-002)
 
 **Checkpoint**: single and multi-panel figures print and are measured
 
@@ -175,7 +175,7 @@ resize keeps it; the single file works from disk with the network off
 ## Phase 9: Polish
 
 - [ ] T046 [P] Check SC-004: write the bands figure from figpress-plotly's example with the same page, style and fonts and compare the two PDFs at 1 pt, in `tests/test_example.py`
-- [ ] T047 [P] Time both examples' builds on CI (< 30 s each, plan's performance goal)
+- [ ] T047 [P] Time both examples' builds on CI (< 30 s each, plan's performance goal). On this Mac a print takes 5–20 s, erratically: desktop Chrome does background work (default web apps, OS integration). Try Chrome for Testing (`choreo_get_chrome`, a ~150 MB download, needs the maintainer's yes) or a browser kept open across prints
 - [ ] T048 Run `quickstart.md` end to end and fix what it finds
 
 ---

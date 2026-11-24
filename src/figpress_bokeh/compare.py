@@ -139,17 +139,16 @@ def _texts(new_chars, ref_chars, tol) -> list[Element]:
     return out
 
 
-def _lines(img: np.ndarray, px_per_pt: float = DPI / 72) -> dict[str, float]:
-    """The frame: the outermost long straight dark lines (continuous over half the image), in pt."""
+def _lines(img: np.ndarray, px_per_pt: float = DPI / 72, share: float = 0.2) -> dict[str, list[float]]:
+    """The panels' frames: every long straight dark line (continuous over `share` of the page), as
+    vertical ("x") and horizontal ("y") positions in pt, in order. One frame gives two of each."""
     dark = img < 100
     found = {}
-    for axis, (lo, hi) in ((0, ("left", "right")), (1, ("top", "bottom"))):
+    for axis, key in ((0, "x"), (1, "y")):
         runs = _longest_runs(dark if axis == 0 else dark.T)  # per column (axis 0) or per row
-        idx = np.flatnonzero(runs > 0.5 * (dark.shape[0] if axis == 0 else dark.shape[1]))
-        if idx.size:
-            groups = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1)
-            found[lo] = groups[0].mean() / px_per_pt
-            found[hi] = groups[-1].mean() / px_per_pt
+        idx = np.flatnonzero(runs > share * (dark.shape[0] if axis == 0 else dark.shape[1]))
+        groups = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1) if idx.size else []
+        found[key] = [g.mean() / px_per_pt for g in groups]
     return found
 
 
@@ -164,12 +163,16 @@ def _longest_runs(m: np.ndarray) -> np.ndarray:
 
 
 def _frame(new, ref, tol) -> list[Element]:
+    """Each reference frame line matched, in order, to the new figure's. One frame's lines are named
+    left, right, top and bottom; several panels' are named x1, x2, ... and y1, y2, ...."""
+    if len(new["x"]) != len(ref["x"]) or len(new["y"]) != len(ref["y"]):
+        raise ValueError(f"panel counts differ: frame lines {len(new['x'])}+{len(new['y'])} in the new figure, "
+                         f"{len(ref['x'])}+{len(ref['y'])} in the reference")
     out = []
-    for edge, v in ref.items():
-        if edge not in new:
-            out.append(Element("frame", edge, float("nan"), float("nan"), False))
-            continue
-        d = new[edge] - v
-        dx, dy = (d, 0.0) if edge in ("left", "right") else (0.0, d)
-        out.append(Element("frame", edge, dx, dy, abs(d) <= tol))
+    for key, names in (("x", ("left", "right")), ("y", ("top", "bottom"))):
+        single = len(ref[key]) == 2
+        for k, (a, b) in enumerate(zip(new[key], ref[key])):
+            d = a - b
+            dx, dy = (d, 0.0) if key == "x" else (0.0, d)
+            out.append(Element("frame", names[k] if single else f"{key}{k + 1}", dx, dy, abs(d) <= tol))
     return out
