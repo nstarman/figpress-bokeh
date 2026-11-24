@@ -174,9 +174,9 @@ resize keeps it; the single file works from disk with the network off
 
 ## Phase 9: Polish
 
-- [ ] T046 [P] Check SC-004: write the bands figure from figpress-plotly's example with the same page, style and fonts and compare the two PDFs at 1 pt, in `tests/test_example.py`
+- [X] T046 [P] Check SC-004: the bands figure from figpress-plotly's example and from figpress-bokeh's, compared at 1 pt: all 25 elements agree, largest 0.84 pt (2026-11-24). Checked once, not in `tests/`: a test would need figpress-plotly as a development dependency
 - [ ] T047 [P] Time both examples' builds on CI (< 30 s each, plan's performance goal). On this Mac a print takes 5–20 s, erratically: desktop Chrome does background work (default web apps, OS integration). Try Chrome for Testing (`choreo_get_chrome`, a ~150 MB download, needs the maintainer's yes) or a browser kept open across prints
-- [ ] T048 Run `quickstart.md` end to end and fix what it finds
+- [X] T048 Run `quickstart.md` end to end and fix what it finds
 
 ---
 
