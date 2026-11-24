@@ -73,6 +73,52 @@ export function entryAt(entries, x, y) {
   return null;
 }
 
+// Light and dark: copied from figpress-plotly src/figpress_plotly/js/index.js at f6d48b2.
+// The website's dark theme (nstarkman.space): its background and its text.
+export const DARK = { ground: "#0B0E14", ink: "#E5E9F0" };
+
+const rgbOf = (c) => {
+  const s = c.trim().toLowerCase();
+  if (s === "black") return [0, 0, 0, 1];
+  if (s === "white") return [255, 255, 255, 1];
+  let m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/.exec(s);
+  if (m) return [...m.slice(1).map((h) => parseInt(h, 16)), 1];
+  m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(s);
+  return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : null;
+};
+
+/** In the dark theme, a neutral colour (a grey, black or white) at its place between the palette's
+ * text (black) and background (white); any other colour, and its alpha, unchanged. */
+export function darkNeutral(color, palette = DARK) {
+  const c = typeof color === "string" && rgbOf(color);
+  if (!c || !(c[0] === c[1] && c[1] === c[2])) return color;
+  const L = c[0] / 255, ink = rgbOf(palette.ink), ground = rgbOf(palette.ground);
+  const [r, g, b] = [0, 1, 2].map((k) => Math.round(ink[k] + (ground[k] - ink[k]) * L));
+  return c[3] === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${c[3]})`;
+}
+
+/** The changes that put a model's colour properties `names` in the dark theme: plain colours and
+ * value specs; a colour taken from data (a field) stays. */
+export function darkColors(model, names, palette = DARK) {
+  const out = {};
+  for (const n of names) {
+    const v = model[n];
+    if (typeof v === "string" && darkNeutral(v, palette) !== v) out[n] = darkNeutral(v, palette);
+    else if (v && typeof v === "object" && typeof v.value === "string" && darkNeutral(v.value, palette) !== v.value) {
+      out[n] = { ...v, value: darkNeutral(v.value, palette) };
+    }
+  }
+  return out;
+}
+
+/** Dark or light: a `?theme=` on the page (an embedding site passes its own), else the document's
+ * `data-theme` (the website's toggle), else the system's. */
+export function isDark(doc = document, win = globalThis) {
+  const asked = new URLSearchParams(win.location?.search ?? "").get("theme") ?? doc.documentElement.dataset.theme;
+  if (asked === "dark" || asked === "light") return asked === "dark";
+  return !!win.matchMedia?.("(prefers-color-scheme: dark)").matches;
+}
+
 async function loadFonts(fonts) {
   await Promise.all(Object.entries(fonts).map(async ([family, url]) => {
     const face = new FontFace(family, `url(${url})`);
@@ -93,6 +139,7 @@ export async function mount(el, spec, { print = false } = {}) {
   const hidden = new Set();
   let scale = 1, target = null, views = [], page = null, drawing = Promise.resolve();
   let members = {};
+  let forced = null; // a theme set by the embedding site through the handle
 
   async function draw(s) {
     for (const v of views) {
@@ -125,7 +172,18 @@ export async function mount(el, spec, { print = false } = {}) {
       d.style.left = `${l * s - b.left}px`;
       d.style.top = `${t * s - b.top}px`;
     });
-    if (!print) wire(views[0].model.document, k);
+    if (!print) {
+      const dark = forced ? forced === "dark" : isDark();
+      el.dataset.theme = dark ? "dark" : "light"; // for the page's own CSS
+      if (dark) {
+        // Bokeh leaves defaults (white backgrounds, grey labels) out of its JSON: map the live models.
+        for (const m of views[0].model.document._all_models.values()) {
+          const changes = darkColors(m, Object.keys(m.properties).filter((n) => n.endsWith("color")));
+          if (Object.keys(changes).length) m.setv(changes);
+        }
+      }
+      wire(views[0].model.document, k);
+    }
     scale = s;
   }
 
@@ -174,6 +232,10 @@ export async function mount(el, spec, { print = false } = {}) {
   };
   await fit();
   new ResizeObserver(() => fit()).observe(el);
+  // Redraw when the theme changes: the website's toggle, or the system's.
+  const retheme = () => { drawing = drawing.then(() => draw(scale)); };
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", retheme);
   window.fbDrawn = true;
   return {
     hidden: () => [...hidden], toggle: (g) => toggle(g), redrawn: () => drawing,
@@ -181,5 +243,7 @@ export async function mount(el, spec, { print = false } = {}) {
     zoom: () => scale, // the drawing's scale against spec.k
     k: () => spec.k * scale, // px per pt as drawn now
     legend: spec.legend, // each legend entry's box on the page (pt)
+    theme: () => el.dataset.theme,
+    setTheme: (t) => { forced = t === "dark" || t === "light" ? t : null; retheme(); return drawing; },
   };
 }

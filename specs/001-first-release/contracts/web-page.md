@@ -10,5 +10,5 @@
   `prefers-color-scheme`. Only greys change.
 - The figure fills its container's width between ½× and 3× the print width; narrower, it scrolls.
 - Reader state (hidden groups) survives resizes and theme changes, not reloads.
-- `mount` returns `{hidden(), toggle(group), visible(group), zoom(), k(), legend, redrawn()}` for an
-  embedding site and the tests (`setTheme` comes with US5).
+- `mount` returns `{hidden(), toggle(group), visible(group), zoom(), k(), legend, redrawn(), theme(),
+  setTheme("dark" | "light" | null)}` for an embedding site and the tests.

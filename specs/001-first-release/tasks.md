@@ -154,8 +154,8 @@ resize keeps it; the single file works from disk with the network off
 
 **Independent test**: each theme and the system setting; greys change, other colours and layout do not
 
-- [ ] T040 [P] [US5] `tests/smoke/test_theme.py` and theme cases in `tests/runtime.test.mjs` (grey mapping, `?theme=`, `data-theme`, `prefers-color-scheme`)
-- [ ] T041 [US5] Copy figpress-plotly's grey mapping and theme detection into `src/figpress_bokeh/js/index.js`; walk the document's models and map colour properties; redraw on theme change, keeping reader state
+- [X] T040 [P] [US5] `tests/smoke/test_theme.py` and theme cases in `tests/runtime.test.mjs` (grey mapping, `?theme=`, `data-theme`, `prefers-color-scheme`)
+- [X] T041 [US5] Copy figpress-plotly's grey mapping and theme detection into `src/figpress_bokeh/js/index.js`; map colour properties on the live models after embedding (Bokeh leaves defaults such as white backgrounds out of its JSON); redraw on theme change, keeping reader state
 
 ---
 

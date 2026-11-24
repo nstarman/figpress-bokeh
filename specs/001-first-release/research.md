@@ -150,9 +150,11 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 ## R8. Dark mode
 
 - **Decision**: as in figpress-plotly (its R8): greys only, mapped into the website's dark palette;
-  theme from `?theme=`, else the page's `data-theme`, else the system. The runtime walks the
-  document's models and maps colour properties; the theme logic is copied from figpress-plotly's
-  runtime.
+  theme from `?theme=`, else the page's `data-theme`, else the system, or `setTheme()` from an
+  embedding site. The grey mapping and theme detection are copied from figpress-plotly's runtime.
+  Bokeh leaves default values (white backgrounds, grey tick labels) out of its JSON, so the runtime
+  maps every `*_color` property on the live models after embedding, plain or as a value spec;
+  colours taken from data stay. A theme change redraws, keeping the reader's hidden groups.
 
 ## R9. Comparing with the paper's figure
 
