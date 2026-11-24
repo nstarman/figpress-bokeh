@@ -63,17 +63,17 @@ the style's fonts, none Type 3, no toolbar or logo, each text once
 
 ### Tests for US1
 
-- [ ] T012 [P] [US1] `tests/test_pdf.py`: page size within 0.1 pt, fonts embedded are exactly the given ones and none Type 3, no toolbar or logo, text layer has each label once, no Chrome gives a message saying what to install, text outside the page or its frame is reported rather than clipped
-- [ ] T013 [P] [US1] `tests/test_text.py`: `tex()` runs for Greek, italic and upright, sub- and superscripts, `\times`, `\in`, `km s$^{-1}$`; an unsupported command fails naming it; unbalanced braces fail
-- [ ] T014 [P] [US1] `tests/test_figure.py`: the decorator gives `build`, `write_pdf`, `write_web`; no fonts fails; `build` returning a non-Bokeh object fails naming its type; a figure's own setting wins over the style
+- [X] T012 [P] [US1] `tests/test_pdf.py`: page size within 0.1 pt, fonts embedded are exactly the given ones and none Type 3, no toolbar or logo, text layer has each label once, no Chrome gives a message saying what to install, text outside the page or its frame is reported rather than clipped
+- [X] T013 [P] [US1] `tests/test_text.py`: `tex()` runs for Greek, italic and upright, sub- and superscripts, `\times`, `\in`, `km s$^{-1}$`; an unsupported command fails naming it; unbalanced braces fail
+- [X] T014 [P] [US1] `tests/test_figure.py`: the decorator gives `build`, `write_pdf`, `write_web`; no fonts fails; `build` returning a non-Bokeh object fails naming its type; a figure's own setting wins over the style
 
 ### Implementation for US1
 
-- [ ] T015 [P] [US1] `src/figpress_bokeh/style.py`: `Style(fonts, size=8, label=9, spine=0.7, ticks="inside", ticklen=3.5, tickwidth=0.6, minor_ticklen=2, line=1, marker=3, color="black")` → `.theme` (a Bokeh `Theme`); toolbar and logo off
-- [ ] T016 [P] [US1] `src/figpress_bokeh/text.py`: copy figpress-plotly's `tex()` parser; emit runs (`text`, `font`, `size`, `dx`, `dy`) with `dx` from the font's advance widths; `text()` draws runs as `Label`s at a page point, a data point or as an axis title (the axis's own label left empty)
-- [ ] T017 [US1] `src/figpress_bokeh/figure.py`: `figure(page, style=None, fonts=None, name=None)` decorator; `build(target)` applies the theme and returns one Bokeh root
-- [ ] T018 [US1] `src/figpress_bokeh/pdf.py`: Chrome lookup through choreographer and `_exact_page` (copied from figpress-plotly's `pdf.py`); print `page.py`'s page with `@page { size: W pt H pt; margin: 0 }`; judge by the PDF, not Chrome's exit code; apply T006 and T007's fixes
-- [ ] T019 [US1] `examples/bands/`: copy `common.py`, `reference.py` and `reference.pdf` from figpress-plotly; write `figure.py`, the Bokeh port (band, dotted edge, line, log axes, a drawn legend can wait for T029)
+- [X] T015 [P] [US1] `src/figpress_bokeh/style.py`: `Style(fonts, size=8, label=9, spine=0.7, ticks="inside", ticklen=3.5, tickwidth=0.6, minor_ticklen=2, line=1, marker=3, color="black")` → `.theme` (a Bokeh `Theme`); toolbar and logo off
+- [X] T016 [P] [US1] `src/figpress_bokeh/text.py`: copy figpress-plotly's `tex()` parser; emit runs (`text`, `font`, `size`, `dx`, `dy`) with `dx` from the font's advance widths; `text()` draws runs as `Label`s at a page point, a data point or as an axis title (the axis's own label left empty)
+- [X] T017 [US1] `src/figpress_bokeh/figure.py`: `figure(page, style=None, fonts=None, name=None)` decorator; `build(target)` applies the theme and returns one Bokeh root
+- [X] T018 [US1] `src/figpress_bokeh/pdf.py`: Chrome lookup through choreographer and `_exact_page` (copied from figpress-plotly's `pdf.py`); print `page.py`'s page with `@page { size: W pt H pt; margin: 0 }`; judge by the PDF, not Chrome's exit code; apply T006 and T007's fixes
+- [X] T019 [US1] `examples/bands/`: copy `common.py`, `reference.py` and `reference.pdf` from figpress-plotly; write `figure.py`, the Bokeh port (band, dotted edge, line, log axes, the drawn legend; tick labels and titles drawn with `fb.text` as matplotlib places them)
 
 **Checkpoint**: the bands figure prints at the right size with the right fonts
 
@@ -86,10 +86,10 @@ the style's fonts, none Type 3, no toolbar or logo, each text once
 **Independent test**: the bands port passes at 1 pt; a copy with one label moved 2 pt fails,
 naming it
 
-- [ ] T020 [P] [US4] `tests/test_compare.py`: copy figpress-plotly's, add a two-panel case (frames matched by position, text matched within its panel) and the moved-label failure
-- [ ] T021 [US4] `src/figpress_bokeh/compare.py`: copy figpress-plotly's `compare.py`; find every panel frame as a closed rectangle of long dark lines; match panels by position; page sizes or panel counts that differ fail
-- [ ] T022 [US4] `src/figpress_bokeh/cli.py`: `figpress-bokeh build file.py:name --out DIR [--target pdf|web]` and `compare NEW REF --tol 1 --overlay PNG`; exit 0, 1 (comparison failed), 2 (usage), with `tests/test_cli.py`
-- [ ] T023 [US4] `tests/test_example.py`: the bands port matches `examples/bands/reference.pdf` within 1 pt (SC-001); tune T019 until it does
+- [ ] T020 [P] [US4] `tests/test_compare.py`: copied from figpress-plotly (done); still to add: a two-panel case (frames matched by position, text matched within its panel) and the moved-label failure
+- [ ] T021 [US4] `src/figpress_bokeh/compare.py`: copied from figpress-plotly (done, one frame); still to do, with the grid example: find every panel frame as a closed rectangle of long dark lines; match panels by position; page sizes or panel counts that differ fail
+- [X] T022 [US4] `src/figpress_bokeh/cli.py`: `figpress-bokeh build file.py:name --out DIR [--target pdf|web]` and `compare NEW REF --tol 1 --overlay PNG`; exit 0, 1 (comparison failed), 2 (usage), with `tests/test_cli.py`
+- [X] T023 [US4] `tests/test_example.py`: the bands port matches `examples/bands/reference.pdf` within 1 pt (SC-001); tune T019 until it does
 
 **Checkpoint**: MVP: one-panel print figures, measured
 
@@ -113,7 +113,7 @@ position and matches its matplotlib reference within 1 pt (SC-002)
 - [ ] T026 [US3] `src/figpress_bokeh/panels.py`: `panels(plots, frames=None, margins=None, gaps=None, share_x=None, share_y=None, labels=None)`; frames and a grid both fails; one Bokeh root holding the panels and the page layer (a plot covering the page, no axes, in page points)
 - [ ] T027 [US3] Extend `tests/test_print.py`'s placement check to the grid example (placement itself is in `page.py` since T008)
 - [ ] T028 [US3] Panel labels on the page layer in `src/figpress_bokeh/panels.py`, set by `text.py` runs, at the same position relative to each frame
-- [ ] T029 [US3] `src/figpress_bokeh/legend.py`: `legend(target, entries, at, size, loc="upper left", ...)` and `Entry(group, label, line=None, band=None, edge=None, marker=None)`, laid out as matplotlib's legend (copy the layout rules from figpress-plotly's `legend.py`) on the page layer; an unknown group fails; with `tests/test_legend.py`
+- [X] T029 [US3] (done early: the bands port needs it) `src/figpress_bokeh/legend.py`: `legend(target, entries, at, size, loc="upper left", ...)` and `Entry(group, label, line=None, band=None, edge=None, marker=None)`, laid out as matplotlib's legend (copy the layout rules from figpress-plotly's `legend.py`) on the page layer; an unknown group fails; with `tests/test_legend.py`
 - [ ] T030 [US3] `examples/grid/reference.py` (matplotlib, 2 × 2, shared x per column and y per row, one figure legend, labels (a)–(d), DejaVu fonts) → commit `examples/grid/reference.pdf`
 - [ ] T031 [US3] `examples/grid/figure.py`: the Bokeh port with `panels()`, groups tagged `fb:group:<name>`, the figure legend
 - [ ] T032 [US3] `tests/test_example.py`: the grid port matches its reference within 1 pt for every panel's frame and text (SC-002)

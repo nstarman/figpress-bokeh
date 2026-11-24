@@ -21,13 +21,13 @@ def font(size: float) -> str:
     return f"{size * K:g}px"
 
 
-def dash(style: str | tuple[float, ...], lw: float = 1.0) -> list[float]:
+def dash(style: str | tuple[float, ...], lw: float = 1.0) -> list[int]:
     """A Bokeh line_dash: a matplotlib style (`:`, `--`, `-.`) scaled by the line width `lw` (pt),
-    as matplotlib scales it, or explicit on/off lengths in pt."""
+    as matplotlib scales it, or explicit on/off lengths in pt. Bokeh takes whole px (0.125 pt)."""
     if isinstance(style, str):
         if style not in DASHES:
             raise ValueError(f"unknown dash style {style!r}; use one of {', '.join(DASHES)} or lengths in pt")
         lengths = [v * lw for v in DASHES[style]]
     else:
         lengths = list(style)
-    return [round(pt(v), 3) for v in lengths]
+    return [max(1, round(pt(v))) for v in lengths]

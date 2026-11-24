@@ -4,6 +4,7 @@ page, scaled by 1/(0.75 K), on a page of exactly the figure's size (research R4)
 The Chrome lookup is copied from figpress-plotly src/figpress_plotly/pdf.py at f6d48b2.
 """
 
+import fcntl
 import subprocess
 import tempfile
 from pathlib import Path
@@ -11,6 +12,20 @@ from pathlib import Path
 import pypdfium2 as pdfium
 
 from .units import K
+
+# Chrome in its own profile, kept between prints: a fresh profile costs ~15 s to create, and Chrome's
+# default profile made it crash on exit (another ~10 s). With these, a print takes ~2 s.
+FLAGS = ["--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--no-sandbox", "--no-first-run",
+         "--no-default-browser-check", "--disable-extensions", "--disable-sync", "--disable-component-update",
+         "--disable-background-networking"]
+
+
+def profile() -> Path:
+    from platformdirs import user_cache_dir  # comes with choreographer
+
+    path = Path(user_cache_dir("figpress-bokeh")) / "chrome-profile"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def chrome() -> str:
@@ -30,9 +45,11 @@ def print_page(html: str, path: Path, page: tuple[float, float], budget_ms: int 
     with tempfile.TemporaryDirectory() as tmp:
         src, big = Path(tmp) / "print.html", Path(tmp) / "big.pdf"
         src.write_text(html, encoding="utf-8")
-        r = subprocess.run([chrome(), "--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--no-sandbox",
-                            f"--virtual-time-budget={budget_ms}", f"--print-to-pdf={big}", src.as_uri()],
-                           capture_output=True, text=True)
+        prof = profile()
+        with open(prof.parent / "chrome-profile.lock", "w") as lock:  # one Chrome per profile: prints take turns
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            r = subprocess.run([chrome(), *FLAGS, f"--user-data-dir={prof}", f"--virtual-time-budget={budget_ms}",
+                                f"--print-to-pdf={big}", src.as_uri()], capture_output=True, text=True)
         # Chrome can fail on its way out after writing the PDF: judge by the PDF, not the exit code.
         if not big.is_file() or big.stat().st_size == 0:
             raise RuntimeError(f"Chrome could not print the figure (exit {r.returncode}):\n{r.stderr[-2000:]}")

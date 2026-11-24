@@ -8,8 +8,8 @@ def test_eight_px_per_point():
 
 
 def test_matplotlib_dashes_scale_with_line_width():
-    assert dash(":", 0.75) == [6.0, 9.9]                 # (1, 1.65) × 0.75 pt × 8 px/pt
-    assert dash("--", 1.5) == [44.4, 19.2]
+    assert dash(":", 0.75) == [6, 10]                   # (1, 1.65) × 0.75 pt × 8 px/pt, whole px
+    assert dash("--", 1.5) == [44, 19]
     assert len(dash("-.", 0.75)) == 4
 
 

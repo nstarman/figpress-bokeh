@@ -20,10 +20,10 @@ def bokehjs() -> str:
     return Resources(mode="inline", components=["bokeh"]).render_js()
 
 
-def document(plots: list[Plot]) -> tuple[dict, list[dict]]:
-    """The plots as one Bokeh document: its JSON and one render item per panel, rooted at
-    `fb-panel-<k>`."""
-    with OutputDocumentFor(plots, always_new=True):
+def document(plots: list[Plot], theme=None) -> tuple[dict, list[dict]]:
+    """The plots as one Bokeh document (with the paper's `theme`, if any): its JSON and one render
+    item per panel, rooted at `fb-panel-<k>`."""
+    with OutputDocumentFor(plots, apply_theme=theme, always_new=True):
         docs, items = standalone_docs_json_and_render_items(plots)
     ids = [p.id for p in plots]
     out = []
@@ -60,14 +60,14 @@ Bokeh.require("core/util/svg").SVGRenderingContext2D.prototype.strokeText = func
 
 
 def html(plots: list[Plot], frames: list[tuple[float, float, float, float]], page: tuple[float, float],
-         fonts: Fonts, title: str = "figure", backend: str = "svg") -> str:
+         fonts: Fonts, title: str = "figure", backend: str = "svg", theme=None) -> str:
     """The page for `plots`, each with its frame (left, top, width, height in pt) on a page of
     `page` (pt). `backend` is Bokeh's output backend: "svg" for print, "canvas" for the web."""
     if len(plots) != len(frames):
         raise ValueError(f"{len(plots)} panels but {len(frames)} frames")
     for p in plots:
         p.output_backend = backend
-    docs, items = document(plots)
+    docs, items = document(plots, theme)
     w, h = (v * K for v in page)
     figure = {"docs": docs, "items": items, "ids": [p.id for p in plots], "families": list(FAMILY.values()),
               "frames": [[l * K, t * K] for l, t, _, _ in frames]}

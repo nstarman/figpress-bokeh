@@ -71,9 +71,11 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
   `Bokeh.require("core/util/svg")`) to do nothing, and the build refuses a figure that sets
   `text_outline_color`, since paper figures do not outline text. With that, the PDF has only
   CID TrueType subsets and each label once.
-- **Speed**: Chrome took 15–25 s per print in the spike (BokehJS inlined, a 5 s virtual-time
-  budget). That threatens the 30 s per example goal; T047 measures it, and a page that signals when
-  it is drawn (so the budget can be short) is the first fix to try.
+- **Speed**: Chrome took 13–25 s per print, even for a trivial page: with the default profile it
+  crashed on exit and recorded a crash dump, and a fresh profile costs ~15 s to create. Chrome now
+  runs with first-run, sync, extension and update checks off and a persistent profile in
+  figpress-bokeh's cache folder; a print takes ~2 s. Prints take turns on a file lock, since one
+  profile cannot serve two Chromes and a showyourwork build runs figure scripts in parallel.
 - **Spike**: a one-page PDF of the page size (280.08 × 120 pt before the fix-up), text is real
   text, and the font is embedded as a subset. Two things to resolve in Phase 1: Chrome embedded
   some glyphs as **Type 3** fonts next to the CID TrueType subset, and the rotated axis label
@@ -93,6 +95,13 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
   package draws the runs as `Label` annotations in screen units. Axis titles with mathematics are
   drawn this way, with the axis's own label left empty; plain titles use Bokeh's axis label.
   figpress-plotly's `text.py` parser is copied; its HTML output is replaced by runs.
+- **Baseline**: BokehJS's SVG output puts the middle of a font's ascent and descent (hhea) where a
+  label's alphabetic baseline should be (measured 0.346 em low in DejaVu at 5–20 pt), so `text()`
+  raises every run by that much. Whether the web canvas needs the same is checked by the overlay
+  test (US2).
+- **Alignment**: `va="top"`, `"bottom"` and `"center"` use matplotlib's line extents, the ink top of
+  "l" and the ink bottom of "p" (0.760 and 0.208 em in DejaVu Serif), not the font's line metrics.
+  With these, the bands port's tick labels and titles land within 0.6 pt of matplotlib's.
 - **Rationale**: FR-004 requires the paper's math fonts in both outputs and no fallback.
 - **Alternatives**: MathJax (`MathText`; wrong fonts, needs a CDN or a large bundle); pre-rendered
   glyph paths (not text, not selectable).
