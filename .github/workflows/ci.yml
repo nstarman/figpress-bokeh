@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Version matches its tag form
+        run: python3 scripts/version.py check
+      - name: Python tests (Chrome comes with the runner image)
+        run: uv run pytest -v
+      - name: Runtime tests
+        run: node --test "tests/*.test.mjs"
+      - name: The examples, built and compared with their references (each under 30 s)
+        run: |
+          for name in bands grid; do
+            start=$SECONDS
+            uv run figpress-bokeh build examples/$name/figure.py:$name --out build/
+            echo "$name built in $((SECONDS - start)) s"; test $((SECONDS - start)) -lt 30
+            uv run figpress-bokeh compare build/$name.pdf examples/$name/reference.pdf --tol 1 --overlay build/$name-overlay.png
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: examples
+          path: build/
+      - name: The Python package builds and imports
+        run: |
+          uv build
+          uv run --no-project --with dist/*.whl python -c "import figpress_bokeh as f; print(f.__version__)"
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v6
+      - name: Playwright's Chromium
+        run: uv run playwright install --with-deps chromium
+      - name: The web figures in a browser (hover, toggles, resize, theme, offline, overlay at three widths)
+        run: uv run pytest -m smoke -v
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke
+          path: build/smoke/

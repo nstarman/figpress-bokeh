@@ -19,27 +19,37 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 
 ## R2. Units
 
-- **Decision**: `fb.pt(v)` converts points to Bokeh's screen units, which are CSS px (×4/3). Font
-  sizes are passed to Bokeh as `"8pt"` strings, which Bokeh accepts directly. `fb.dash(":", lw)`
-  gives matplotlib's dash patterns in px. Copied from figpress-plotly's `units.py`.
-- **Rationale**: Principle II; Bokeh and Plotly share the CSS px unit, so the code carries over.
+- **Decision**: figures are drawn at **K = 8 px per pt** (`fb.pt(v) = 8 v`), not at CSS's 4/3. Font
+  sizes are px strings (`fb.font(7)` → `"56px"`); `fb.dash(":", lw)` gives matplotlib's dash
+  patterns in the same units. The print step scales the page down by 1/(0.75 K) (R4); the web
+  runtime scales it to its column anyway (R7). Adapted from figpress-plotly's `units.py`.
+- **Rationale**: Bokeh's `frame_width` and `frame_height` are whole px. At 4/3 px per pt a frame
+  snaps to 0.75 pt steps (a 100 pt frame came out 99.75 pt); at 8 px per pt the step is 0.125 pt,
+  inside the 0.1 pt placement tolerance once frames are measured (R3).
+- **Alternatives**: CSS `transform: scale()` on the print page (Chrome clipped the content in
+  print); Chrome's DevTools `printToPDF` `scale` (works through Playwright, but a choreographer
+  connection hung in the spike and Playwright is too heavy as a runtime dependency).
 
 ## R3. Panels and exact placement
 
 - **Decision**: a figure's panels are placed by the package, not by Bokeh's layout engine. The
-  author gives each panel's frame (left, top, width, height in pt on the page) or a grid
-  (`fb.panels(grid=(rows, cols), frames=..., share_x=..., share_y=...)`). The package sets each
-  plot's `frame_width`/`frame_height` and its borders so its frame lands where it was given, puts
-  the panels in one Bokeh root (one document), then **measures** where BokehJS actually drew each
-  frame in the print page and corrects the borders once (a second print). The build fails if a
-  frame is still off by more than 0.1 pt, naming the panel. Shared axes are shared `Range1d`
-  objects; tick labels are hidden on inner panels unless asked.
+  author gives each panel's frame (left, top, width, height in pt on the page) or a grid. All
+  panels go in **one Bokeh document with one root per panel** (`bokeh.embed.util.
+  standalone_docs_json_and_render_items`), so ranges and data can be shared, and each root is
+  embedded in its own absolutely positioned element. Each plot gets `frame_width`/`frame_height`;
+  after BokehJS lays it out, the page reads the frame's box from the plot's view
+  (`Bokeh.index.roots[k].frame.bbox`) and moves the element so the frame sits at its target. This
+  happens in the page itself, for print and web alike, so no second print is needed. The build
+  reads back the measured frames and fails if one is off by more than 0.1 pt, naming the panel.
+  Shared axes are shared range objects; tick labels are hidden on inner panels unless asked.
 - **Spike**: (a) panels embedded as separate documents cannot share a range (Bokeh: "Models must be
   owned by only a single document"), so all panels must be one root. (b) In a `gridplot` with fixed
   `frame_width`, `frame_height` and `min_border_*`, frames landed several points from the computed
   positions (a 100 pt frame measured ≈ 97 pt between outline centres; the second panel's frame was
-  4 pt right of where the borders put it). Bokeh's layout is not exact by construction, so it must
-  be measured and corrected.
+  4 pt right of where the borders put it). The cause: `min_border_*` is a minimum, and Bokeh widens
+  a border to fit its tick and axis labels. (c) With one root per panel placed by the page, frames
+  landed within 0.05 pt of their targets (40.05, 139.95, 175.05, 274.95 pt against 40, 140, 175,
+  275).
 - **Rationale**: User Story 3 needs frames within 0.1 pt; computing alone does not achieve it, and
   measuring in the same Chrome that prints the PDF is the ground truth.
 - **Alternatives**: trusting `gridplot` (off by points, per the spike); separate absolutely placed
@@ -49,11 +59,25 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 ## R4. The PDF
 
 - **Decision**: there is no Kaleido step. The print page is the web page itself with
-  `output_backend="svg"`, the paper's fonts as `@font-face`, `@page { size: W pt H pt; margin: 0 }`,
+  `output_backend="svg"`, the paper's fonts as `@font-face`, `@page { size: 8W px 8H px; margin: 0 }`
   and BokehJS inlined; the page waits for the fonts before embedding the figure. Headless Chrome
-  prints it (`--print-to-pdf`, found through `choreographer`, as figpress-plotly finds it), and the
-  page box is then set to exactly W × H with pypdfium2 (copied from figpress-plotly's
-  `_exact_page`). The toolbar and logo are off on both targets.
+  prints it (`--print-to-pdf`, found through `choreographer`, as figpress-plotly finds it). pypdfium2
+  then places that page as a form XObject, scaled by 1/6 (that is, 1/(0.75 K)), on a new page of exactly W × H pt;
+  the fonts stay embedded. The toolbar and logo are off on both targets.
+- **Text outlines**: BokehJS draws every label twice, `fillText` then `strokeText`, even when the
+  text has no outline. Its SVG backend writes the second as a `<text fill="none" stroke=…>`, and
+  Chrome prints stroked text as a **Type 3** font. That was the spike's Type 3 font and its doubled
+  label. The page sets `SVGRenderingContext2D.prototype.strokeText` (from
+  `Bokeh.require("core/util/svg")`) to do nothing, and the build refuses a figure that sets
+  `text_outline_color`, since paper figures do not outline text. With that, the PDF has only
+  CID TrueType subsets and each label once.
+- **Speed**: Chrome took 13–25 s per print, even for a trivial page: with the default profile it
+  crashed on exit and recorded a crash dump, and a fresh profile costs ~15 s to create. Chrome now
+  runs with first-run, sync, extension and update checks off and a persistent profile in
+  figpress-bokeh's cache folder; a print then took ~2 s at first, but 5–20 s later, erratically, as
+  desktop Chrome installed default web apps and did OS integration in the background. Puppeteer's
+  flag set did not settle it. Next to try (T047): Chrome for Testing, or one browser kept open. Prints take turns on a file lock, since one
+  profile cannot serve two Chromes and a showyourwork build runs figure scripts in parallel.
 - **Spike**: a one-page PDF of the page size (280.08 × 120 pt before the fix-up), text is real
   text, and the font is embedded as a subset. Two things to resolve in Phase 1: Chrome embedded
   some glyphs as **Type 3** fonts next to the CID TrueType subset, and the rotated axis label
@@ -73,6 +97,13 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
   package draws the runs as `Label` annotations in screen units. Axis titles with mathematics are
   drawn this way, with the axis's own label left empty; plain titles use Bokeh's axis label.
   figpress-plotly's `text.py` parser is copied; its HTML output is replaced by runs.
+- **Baseline**: BokehJS's SVG output puts the middle of a font's ascent and descent (hhea) where a
+  label's alphabetic baseline should be (measured 0.346 em low in DejaVu at 5–20 pt), so `text()`
+  raises every run by that much. Whether the web canvas needs the same is checked by the overlay
+  test (US2).
+- **Alignment**: `va="top"`, `"bottom"` and `"center"` use matplotlib's line extents, the ink top of
+  "l" and the ink bottom of "p" (0.760 and 0.208 em in DejaVu Serif), not the font's line metrics.
+  With these, the bands port's tick labels and titles land within 0.6 pt of matplotlib's.
 - **Rationale**: FR-004 requires the paper's math fonts in both outputs and no fallback.
 - **Alternatives**: MathJax (`MathText`; wrong fonts, needs a CDN or a large bundle); pre-rendered
   glyph paths (not text, not selectable).
@@ -92,24 +123,38 @@ by headless Chrome) checked the print route; its findings are marked **Spike**.
 
 ## R7. The web runtime
 
-- **Decision**: one ES module, `js/index.js`, shipped in the Python package. It loads the fonts,
-  embeds the figure (`Bokeh.embed.embed_item` on a `json_item`), scales it to its container between
-  ½× and 3× the print width, keeps the reader's state (hidden groups) across redraws, wires group
-  toggles, and maps greys for dark mode. Scaling: first try CSS `zoom` on the page container (one
-  line, and Bokeh redraws at the new resolution); if hover positions or the overlay test fail under
-  `zoom`, rescale the pixel-valued model properties instead, as figpress-plotly does. BokehJS is
-  the build shipped in the Python `bokeh` package used to build the figure, so the model JSON and
-  the renderer always match.
-- **Rationale**: Principles IV and V.
+- **Decision**: one ES module, `js/index.js`, shipped in the Python package and used by both the
+  print page and the web page (Principle IV). `mount(element, spec, {print})` loads the fonts,
+  embeds the figure (one document, one root per panel), places each panel by its frame and, on the
+  web, wires groups and scales the page. Web figures are drawn at 4 px per pt.
+- **Scaling**: the runtime multiplies every screen length in the document's JSON (frame sizes,
+  borders, line widths and dashes, font sizes, tick lengths, standoffs, offsets, marker and head
+  sizes; whole px where BokehJS requires it) by the scale that fits the column, between ½× and 3×
+  the print width, embeds that, and redraws when the column's width changes by more than 1 %.
+  Hidden groups are re-applied after a redraw. Bokeh then draws at its true size: canvases are
+  sharp and hover lands where the mouse is.
+- **Why not CSS**: Bokeh sizes its canvases from `getBoundingClientRect()`, which includes CSS
+  `zoom` and `transform`, so with either it drew only part of each canvas (seen at 700 px, where
+  the page is drawn 979 px wide). figpress-plotly found the same with Plotly.
+- **The page layer** carries a stylesheet turning pointer events off inside its shadow root (Bokeh's
+  own styles turn them back on), so the mouse reaches the panels; legend clicks are hit-tested by
+  the runtime from the entries' boxes, which Python records.
+- **Groups**: renderers whose own tags or whose glyph's tags hold `fb:group:<name>`
+  (`p.line(..., tags=[...])` tags the glyph). Bokeh's own `click_policy="hide"` legend hides one
+  renderer; the runtime makes the rest of its group follow.
+- **Baseline on the web**: the canvas has the same baseline offset as the SVG output, so the
+  correction in `text()` serves both targets; both examples overlay their PDFs at ½×, 1× and 2×.
 - **Alternatives**: `bokeh.embed.file_html` (no fonts, scaling or state; CDN unless told
-  otherwise).
+  otherwise); `sizing_mode="scale_width"` (scales the canvas, not fonts or line widths).
 
 ## R8. Dark mode
 
 - **Decision**: as in figpress-plotly (its R8): greys only, mapped into the website's dark palette;
-  theme from `?theme=`, else the page's `data-theme`, else the system. The runtime walks the
-  document's models and maps colour properties; the theme logic is copied from figpress-plotly's
-  runtime.
+  theme from `?theme=`, else the page's `data-theme`, else the system, or `setTheme()` from an
+  embedding site. The grey mapping and theme detection are copied from figpress-plotly's runtime.
+  Bokeh leaves default values (white backgrounds, grey tick labels) out of its JSON, so the runtime
+  maps every `*_color` property on the live models after embedding, plain or as a value spec;
+  colours taken from data stay. A theme change redraws, keeping the reader's hidden groups.
 
 ## R9. Comparing with the paper's figure
 

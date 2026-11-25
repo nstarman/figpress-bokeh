@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "figpress-bokeh"
+dynamic = ["version"]
+description = "A paper's figures in Bokeh: the print figure and a matching interactive web figure from one definition. In early development."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Nathaniel Starkman" }]
+requires-python = ">=3.12"
+dependencies = [
+  "bokeh>=3.10,<3.11",
+  "choreographer>=1.4",
+  "fonttools>=4.50",
+  "pypdfium2>=4.30",
+  "pillow>=10",
+  "numpy>=1.26",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Visualization",
+]
+
+[project.scripts]
+figpress-bokeh = "figpress_bokeh.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "playwright>=1.48", "matplotlib>=3.9"]
+
+[project.urls]
+Homepage = "https://nstarkman.space/figpress/"
+Repository = "https://github.com/nstarman/figpress-bokeh"
+
+[tool.hatch.version]
+path = "src/figpress_bokeh/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/figpress_bokeh"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/figpress_bokeh", "README.md", "LICENSE", "CHANGELOG.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["smoke: drives a browser (Playwright)"]
+addopts = "-m 'not smoke'"
